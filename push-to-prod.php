@@ -38,16 +38,14 @@ add_action(
                 ?>
         <div class="wrap">
             <h1>Push to Prod</h1>
-            <form hx-post="<?php echo admin_url('admin-ajax.php'); ?>" hx-vals='{"action": "sync_changes"}' hx-trigger="submit"
-                hx-target="#output">
-                <input type="submit" name="push_button" class="button button-primary" value="Push to Production">
-            </form>
 
-            <div id="output">
-                <span class="hidden htmx-indicator">
-                    Syncing...
-                </span>
-            </div>
+            <button class="button button-primary" hx-post="<?php echo admin_url('admin-ajax.php'); ?>"
+                hx-vals='{"action": "sync_changes"}' hx-target="#output" hx-indicator="#loadingIndicator">
+                Sync
+            </button>
+            <div id="loadingIndicator" style="display: none;">Syncing...</div>
+            <div id="output"></div>
+
         </div>
         <?php
             },
@@ -60,45 +58,65 @@ add_action(
 add_action(
     'wp_ajax_sync_changes',
     function () {
-        if (isset($_POST['push_button'])) {
-            date_default_timezone_set('Asia/Kolkata');
-            if (1 == 0) {
-                // Create log directory if it doesn't exist
-                $logDir = WP_CONTENT_DIR . '/rsync-logs/';
-                if (!file_exists($logDir)) {
-                    mkdir($logDir, 0755, true);
-                }
+        // if (isset($_POST['push_button'])) {
+        date_default_timezone_set('Asia/Kolkata');
+        // Create log directory if it doesn't exist
+        $logDir = WP_CONTENT_DIR . '/rsync-logs/';
+        if (!file_exists($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+        $logFile = $logDir . date('Y-m-d_H-i-s') . '_rsync.log';
+        //
+        // sleep(5);
 
-                $source = '/home/rahul/Documents/syncTest/';
-                $destination = 'ubuntu@13.232.50.244:/home/ubuntu/syncTest/';
+        // echo $logFile;
 
-                $logFile = $logDir . date('Y-m-d_H-i-s') . '_rsync.log';
-                $user = wp_get_current_user();
-                $command = "sudo -u rahul rsync -avz " . escapeshellarg($source) . " " . escapeshellarg($destination);
-                $output = shell_exec($command . ' 2>&1');
+        // if (1 == 0) {
+        // Create log directory if it doesn't exist
+        $logDir = WP_CONTENT_DIR . '/rsync-logs/';
+        if (!file_exists($logDir)) {
+            mkdir($logDir, 0755, true);
+        }
+        // $logFile = $logDir . date('Y-m-d_H-i-s') . '_rsync.log';
 
-                if ($output === null) {
-                    echo "Error executing rsync command: " . error_get_last()['message'];
-                } else {
-                    // echo "<pre>$output</pre>";
-                }
+        $logFile = WP_CONTENT_DIR . '/rsync.log';
 
+        $source = '/home/rahul/Documents/syncTest/';
+        $destination = 'ubuntu@13.232.50.244:/home/ubuntu/syncTest/';
 
-                $logEntry = date('Y-m-d H:i:s') . " | User: " . $user->user_login . " | Command: " . $command . PHP_EOL . $output . PHP_EOL;
+        $user = wp_get_current_user();
+        $command = "sudo -u rahul rsync -avz " . escapeshellarg($source) . " " . escapeshellarg($destination);
+        $output = shell_exec($command . ' 2>&1');
 
-                // echo "<pre>$logEntry</pre>";
+        if ($output === null) {
+            echo "Error executing rsync command: " . error_get_last()['message'];
+        } else {
+            $logEntry = date('Y-m-d H:i:s') . " | User: " . $user->user_login . " | Command: " . $command . PHP_EOL . $output . PHP_EOL;
+            // echo "<pre>$output</pre>";
 
-                file_put_contents($logFile, $logEntry, FILE_APPEND);
-
-                error_log("Rsync command executed by " . $user->user_login . " at " . date('Y-m-d H:i:s') . " with output: " . $output . PHP_EOL, 3, $logFile);
-            }
+            // add a line of dashes to separate log entries
+            $logEntry .= str_repeat('-', 80) . PHP_EOL;
         }
 
+        // echo "<pre>$logEntry</pre>";
+
+        file_put_contents($logFile, $logEntry, FILE_APPEND);
+
+        // error_log("Rsync command executed by " . $user->user_login . " at " . date('Y-m-d H:i:s') . " with output: " . $output . PHP_EOL, 3, $logFile);
+        // }
+        // }
+        $lines = explode("\n", $output);
+        $output = implode("\n", array_slice($lines, 0, -3));
         ob_start();
         // if ($result_from_pages):
 
-        print_r($_POST);
+        // print_r($_POST);
         ?>
+
+    <div>
+        <h2>Output</h2>
+        <pre><?php echo $output; ?></pre>
+    </div>
 
     <?php
         echo ob_get_clean();
