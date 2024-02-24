@@ -66,18 +66,7 @@ add_action(
             mkdir($logDir, 0755, true);
         }
         $logFile = $logDir . date('Y-m-d_H-i-s') . '_rsync.log';
-        //
-        // sleep(5);
 
-        // echo $logFile;
-
-        // if (1 == 0) {
-        // Create log directory if it doesn't exist
-        $logDir = WP_CONTENT_DIR . '/rsync-logs/';
-        if (!file_exists($logDir)) {
-            mkdir($logDir, 0755, true);
-        }
-        // $logFile = $logDir . date('Y-m-d_H-i-s') . '_rsync.log';
 
         $logFile = WP_CONTENT_DIR . '/rsync.log';
 
@@ -91,14 +80,15 @@ add_action(
         if ($output === null) {
             echo "Error executing rsync command: " . error_get_last()['message'];
         } else {
-            $logEntry = date('Y-m-d H:i:s') . " | User: " . $user->user_login . " | Command: " . $command . PHP_EOL . $output . PHP_EOL;
             // echo "<pre>$output</pre>";
+            $lines = explode("\n", $output);
+            $output = implode("\n", array_slice($lines, 0, -1));
+            ob_start();
 
+            $logEntry = date('Y-m-d H:i:s') . " | User: " . $user->user_login . " | Command: " . $command . PHP_EOL . $output . PHP_EOL;
             // add a line of dashes to separate log entries
             $logEntry .= str_repeat('-', 80) . PHP_EOL;
         }
-
-        // echo "<pre>$logEntry</pre>";
 
         file_put_contents($logFile, $logEntry, FILE_APPEND);
 
@@ -106,21 +96,37 @@ add_action(
         // }
         // }
         $lines = explode("\n", $output);
-        $output = implode("\n", array_slice($lines, 0, -3));
+
+        unset($lines[count($lines) - 1]);
+        unset($lines[count($lines) - 1]);
+        unset($lines[count($lines) - 1]);
+        unset($lines[0]);
+        unset($lines[1]);
+
+        // $lines = array_slice($lines, 0, -2);
+        // $lines = array_slice($lines, 0, 0);
+        // $output = implode("\n", array_slice($lines, 0, -2));
+        $output = implode("\n", $lines);
+
+        error_log(print_r($lines, true));
         ob_start();
-        // if ($result_from_pages):
 
-        // print_r($_POST);
-        ?>
-
-    <div>
-        <h2>Output</h2>
-        <pre><?php echo $output; ?></pre>
-    </div>
-
-    <?php
+        if (count($lines) > 0) {
+            ?>
+        <div>
+            <h2>Output</h2>
+            <pre><?php echo $output; ?></pre>
+        </div>
+        <?php
+        } else {
+            ?>
+        <div>
+            <p>No changes to sync</p>
+        </div>
+        <?php
+        }
         echo ob_get_clean();
-        // endif;
+
         exit();
     }
 );
